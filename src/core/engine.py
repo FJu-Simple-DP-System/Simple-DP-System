@@ -209,7 +209,7 @@ def run_dp_from_settings(df: pd.DataFrame):
                 )
                 sensitivity = 1.0
 
-                mech = Gaussian(
+                mech = GaussianAnalytic(
                     epsilon=epsilon,
                     delta=delta,
                     sensitivity=sensitivity
