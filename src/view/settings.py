@@ -1,8 +1,11 @@
 import customtkinter as ctk
 from src.view.components import CTkToolTip # 引入剛剛寫的 Tooltip
+from src.core.elements import dp_settings
 
 class SettingsPanel(ctk.CTkFrame):
     def __init__(self, master, **kwargs):
+        self.on_run = kwargs.pop("on_run", None)
+        
         super().__init__(master, **kwargs)
 
         # 標題
@@ -26,8 +29,11 @@ class SettingsPanel(ctk.CTkFrame):
             tooltip_text="選擇要加入雜訊的數學機制：\n• Laplace：適用於數值型查詢 (如平均、總和)。\n• Exponential：適用於從集合中選擇最佳項目。"
         )
         
-        self.opt_algo = ctk.CTkOptionMenu(self, values=["Laplace 機制", "Exponential 機制"])
+        self.opt_algo = ctk.CTkOptionMenu(self, values=["Laplace 機制", "Gaussian 機制"])
+
         self.opt_algo.pack(pady=(5, 10), padx=10, fill="x")
+        self.opt_algo.configure(command=lambda v: dp_settings.set_mechanism(v))
+
 
         # --- 3. 統計操作類型 ---
         self.create_info_label(
@@ -37,6 +43,8 @@ class SettingsPanel(ctk.CTkFrame):
         
         self.opt_query = ctk.CTkOptionMenu(self, values=["平均值 (Mean)", "總和 (Sum)", "計數 (Count)", "直方圖 (Histogram)"])
         self.opt_query.pack(pady=(5, 10), padx=10, fill="x")
+        self.opt_query.configure(command=lambda v: dp_settings.set_query(v))
+
 
         # --- 4. 目標欄位 ---
         self.create_info_label(
@@ -46,6 +54,8 @@ class SettingsPanel(ctk.CTkFrame):
         
         self.opt_col = ctk.CTkOptionMenu(self, values=["(請先載入檔案)"])
         self.opt_col.pack(pady=(5, 10), padx=10, fill="x")
+
+        self.opt_col.configure(command=lambda v: dp_settings.set_column(v))
 
         # --- 5. 資料邊界 ---
         self.create_info_label(
@@ -62,9 +72,21 @@ class SettingsPanel(ctk.CTkFrame):
         self.entry_max = ctk.CTkEntry(self.frame_bounds, placeholder_text="Max", width=60)
         self.entry_max.pack(side="left", padx=(5, 0), expand=True, fill="x")
 
+        # # --- 執行按鈕 ---
+        # self.btn_run = ctk.CTkButton(self, text="執行差分隱私運算", fg_color="#2CC985", hover_color="#229A65", height=40)
+        # self.btn_run.pack(pady=(30, 20), padx=10, fill="x", side="bottom")
+
         # --- 執行按鈕 ---
-        self.btn_run = ctk.CTkButton(self, text="執行差分隱私運算", fg_color="#2CC985", hover_color="#229A65", height=40)
+        self.btn_run = ctk.CTkButton(
+            self,
+            text="執行差分隱私運算",
+            fg_color="#2CC985",
+            hover_color="#229A65",
+            height=40,
+            command=self._on_run_clicked  # 按鈕綁到內部方法
+        )
         self.btn_run.pack(pady=(30, 20), padx=10, fill="x", side="bottom")
+
 
     def create_info_label(self, text, tooltip_text):
         """建立一個帶有 (i) Tooltip 的標題列"""
@@ -95,9 +117,21 @@ class SettingsPanel(ctk.CTkFrame):
     def update_epsilon_label(self, value):
         self.lbl_epsilon.configure(text=f"隱私預算 (ε): {float(value):.1f}")
 
+        dp_settings.set_epsilon(value)
+
     def update_columns(self, columns):
         if columns:
             self.opt_col.configure(values=columns)
             self.opt_col.set(columns[0])
         else:
             self.opt_col.configure(values=["(無可用欄位)"])
+
+    def _on_run_clicked(self):
+        # 先把敏感度寫回 dp_settings
+        dp_settings.set_sensitivity(
+            self.entry_min.get(),
+            self.entry_max.get()
+        )
+        # 然後如果有外部 callback，就呼叫它（交給 MainWindow 處理真的 DP 運算）
+        if self.on_run is not None:
+            self.on_run()

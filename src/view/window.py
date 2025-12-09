@@ -5,8 +5,11 @@ import pandas as pd
 
 # 引入所有元件
 from src.view.components import FileDropFrame
-from src.view.preview_table import DataPreviewTable
-from src.view.settings_panel import SettingsPanel
+from src.view.preview import DataPreviewTable
+from src.view.settings import SettingsPanel
+
+from src.core.elements import dp_settings
+from src.core.engine import *
 
 ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
@@ -19,6 +22,8 @@ class MainWindow(ctk.CTk, TkinterDnD.DnDWrapper):
         self.title("簡單差分隱私系統 - V0.2")
         self.geometry("1100x700")
 
+        self.current_df = None  # 🔹暫存目前載入的完整 DataFrame
+
         # --- Grid 佈局設定 ---
         # column 0: 設定欄 (固定寬度)
         # column 1: 主要內容區 (自動伸縮)
@@ -26,7 +31,7 @@ class MainWindow(ctk.CTk, TkinterDnD.DnDWrapper):
         self.grid_rowconfigure(0, weight=1)
 
         # --- 1. 左側設定面板 (Sidebar) ---
-        self.settings_panel = SettingsPanel(self, width=250, corner_radius=0)
+        self.settings_panel = SettingsPanel(self, width=250, corner_radius=0, on_run=self.execute_dp)
         self.settings_panel.grid(row=0, column=0, sticky="nsew")
 
         # --- 2. 右側主要內容區 (Main Content) ---
@@ -67,6 +72,16 @@ class MainWindow(ctk.CTk, TkinterDnD.DnDWrapper):
         if file_path.lower().endswith(('.csv', '.xlsx')):
             file_name = os.path.basename(file_path)
             
+            # 🔹讀取完整資料，存起來給差分隱私運算用
+            try:
+                if file_path.endswith(".csv"):
+                    self.current_df = pd.read_csv(file_path)
+                else:
+                    self.current_df = pd.read_excel(file_path)
+            except Exception as e:
+                self.status_label.configure(text=f"讀取檔案失敗：{e}", text_color="red")
+                return
+
             # 更新表格資料
             success, message = self.table_frame.update_data(file_path)
 
@@ -100,6 +115,45 @@ class MainWindow(ctk.CTk, TkinterDnD.DnDWrapper):
         else:
             self.status_label.configure(text="錯誤：僅支援 CSV 或 XLSX 格式", text_color="red")
 
-if __name__ == "__main__":
-    app = MainWindow()
-    app.mainloop()
+    def execute_dp(self):
+        """按下『執行差分隱私運算』時執行的邏輯"""
+        # 確認有資料
+        if self.current_df is None:
+            self.status_label.configure(text="請先上傳資料檔案再執行差分隱私運算", text_color="red")
+            return
+
+        # 敏感度已在 SettingsPanel._on_run_clicked 裡寫進 dp_settings
+        # 這裡直接呼叫 engine
+        result = run_dp_from_settings(self.current_df)
+
+        if not result["ok"]:
+            # 發生錯誤
+            self.status_label.configure(text=result["message"], text_color="red")
+            return
+
+        payload = result["result"]
+        query = payload.get("query")
+
+        # 標量統計：mean / sum / count
+        if query in ("mean", "sum", "count"):
+            value = payload.get("value")
+            self.status_label.configure(
+                text=f"DP {query} 結果：{value:.4f}",
+                text_color="green"
+            )
+        # 直方圖 histogram
+        elif query == "histogram":
+            hist = payload.get("hist")
+            self.status_label.configure(
+                text=f"DP histogram 完成，bins={len(hist)}",
+                text_color="green"
+            )
+        else:
+            self.status_label.configure(
+                text="差分隱私運算完成（未知的 query 類型）",
+                text_color="green"
+            )
+
+        # Debug 用：也可以看一下目前所有設定
+        print("DP settings:", dp_settings.get_all())
+
