@@ -207,6 +207,6 @@ marimo/_lsp/
 __marimo__/
 
 # datasets
-wdbc_FT_GT.csv
-wdbc_FT_GT.data
-wdbc.data
+scripts/wdbc/wdbc_FT_GT.csv
+scripts/wdbc/wdbc_FT_GT.data
+scripts/wdbc/wdbc.data

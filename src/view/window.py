@@ -7,6 +7,7 @@ import pandas as pd
 from src.view.components import FileDropFrame
 from src.view.preview import DataPreviewTable
 from src.view.settings import SettingsPanel
+from src.view.start import StartScreen
 
 from src.core.elements import dp_settings
 from src.core.engine import *
@@ -22,7 +23,27 @@ class MainWindow(ctk.CTk, TkinterDnD.DnDWrapper):
         self.title("簡單差分隱私系統 - V0.2")
         self.geometry("1100x700")
 
-        self.current_df = None  # 🔹暫存目前載入的完整 DataFrame
+        # show start screen
+        self.show_start_screen()
+
+    def show_start_screen(self):
+        """顯示開始畫面"""
+        self.start_screen = StartScreen(self, on_start_callback=self.enter_main_app)
+        # 使用 pack fill 佔滿全螢幕
+        self.start_screen.pack(fill="both", expand=True)
+
+    def enter_main_app(self):
+        """
+        從開始畫面進入主程式
+        1. 銷毀 StartScreen
+        2. 建構並顯示主介面 (原本 __init__ 裡的程式碼移到這裡)
+        """
+        # 移除開始畫面
+        self.start_screen.destroy()
+        self.init_configs()
+
+    def init_configs(self):
+        self.current_df = None  # 暫存目前載入的完整 DataFrame
 
         # --- Grid 佈局設定 ---
         # column 0: 設定欄 (固定寬度)
