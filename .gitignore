@@ -210,3 +210,4 @@ __marimo__/
 scripts/wdbc/wdbc_FT_GT.csv
 scripts/wdbc/wdbc_FT_GT.data
 scripts/wdbc/wdbc.data
+scripts/wdbc/wdbc_FT_GT_no_first_col.data

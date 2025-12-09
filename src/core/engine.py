@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import diffprivlib.tools as dpt
-from diffprivlib.mechanisms import Gaussian
+from diffprivlib.mechanisms import GaussianAnalytic
 from src.core.elements import dp_settings
 
 
@@ -235,7 +235,7 @@ def run_dp_from_settings(df: pd.DataFrame):
                     "result": None
                 }
 
-            mech = Gaussian(
+            mech = GaussianAnalytic(
                 epsilon=epsilon,
                 delta=delta,
                 sensitivity=sensitivity
