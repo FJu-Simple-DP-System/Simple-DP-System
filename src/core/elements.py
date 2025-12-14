@@ -10,6 +10,7 @@ class DPSettings:
         # 初始預設值（也與 GUI 預設同步）
         self.epsilon = 1.0
         self.mechanism = "Laplace 機制"
+        self.delta = 1e-5  # 【新增】預設 Delta 值
         self.query = "平均值 (Mean)"
         self.column = None   # 需檔案載入後才能填入
         self.sensitivity_min = None
@@ -24,6 +25,9 @@ class DPSettings:
 
     def set_mechanism(self, mech: str):
         self.mechanism = mech
+
+    def set_delta(self, value: float):  # 【新增】
+        self.delta = float(value)
 
     def set_query(self, query: str):
         self.query = query
@@ -44,6 +48,7 @@ class DPSettings:
         return {
             "epsilon": self.epsilon,
             "mechanism": self.mechanism,
+            "delta": self.delta,        # 【新增】
             "query": self.query,
             "column": self.column,
             "sensitivity_min": self.sensitivity_min,

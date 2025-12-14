@@ -56,6 +56,10 @@ def run_dp_from_settings(df: pd.DataFrame):
     column = cfg["column"]
     min_str = cfg["sensitivity_min"]
     max_str = cfg["sensitivity_max"]
+    try:
+        delta = float(cfg.get("delta", 1e-5))
+    except (ValueError, TypeError):
+        delta = 1e-5
 
     # 2. 基本檢查
     if column is None:
@@ -179,8 +183,6 @@ def run_dp_from_settings(df: pd.DataFrame):
 
     # ========== Gaussian 機制 ==========
     elif mech_key == "gaussian":
-        # 這裡先固定 delta，之後你可以從 GUI 加設定欄位
-        delta = 1e-5
         result_payload["delta"] = delta
 
         try:
