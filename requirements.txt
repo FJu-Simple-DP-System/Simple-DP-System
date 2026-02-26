@@ -6,4 +6,5 @@ matplotlib
 packaging
 tkinterdnd2
 openpyxl
-diffprivlib
+google-generativeai
+pyinstaller
