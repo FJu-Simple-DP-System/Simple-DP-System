@@ -2,6 +2,7 @@
 import pandas as pd
 import numpy as np
 import os
+
 from ai_helper import (
     analyze_data_structure_with_gemini, 
     extract_columns_with_gemini, 
@@ -48,7 +49,7 @@ class DataPipeline:
                 sample_df = pd.read_csv(first_file, header=None, nrows=5)
                 sample_csv_text = sample_df.to_csv(index=False, header=False)
                 
-                has_header, cat_mappings = analyze_data_structure_with_gemini(sample_csv_text)
+                has_header, cat_mappings = analyze_data_structure_with_gemini(sample_csv_text, log_func=self.log)
                 self.log(f"  -> 判斷是否有表頭: {has_header}")
                 if cat_mappings: self.log(f"  -> 發現類別對應: {cat_mappings}")
             else:
@@ -78,7 +79,7 @@ class DataPipeline:
                     self.log("[Step 3] 執行 AI 補齊欄位名...")
                     if desc_file:
                         with open(desc_file, 'r', encoding='utf-8', errors='ignore') as f:
-                            columns = extract_columns_with_gemini(f.read())
+                            columns = extract_columns_with_gemini(f.read(), log_func=self.log)
                         if columns and len(columns) == len(self.df.columns):
                             self.df.columns = columns
                             self.log(f"  -> 成功套用: {columns}")
@@ -153,7 +154,7 @@ class DataPipeline:
 
                 if cols_to_infer:
                     self.log(f"  -> 批次發送 {len(cols_to_infer)} 個欄位給 AI 推算上下限...")
-                    batch_bounds = infer_bounds_batch_with_gemini(cols_to_infer)
+                    batch_bounds = infer_bounds_batch_with_gemini(cols_to_infer, log_func=self.log)
                     for col, bounds in batch_bounds.items():
                         if col in self.df.columns and "lower" in bounds and "upper" in bounds:
                             self.df[col] = self.df[col].clip(lower=bounds["lower"], upper=bounds["upper"])

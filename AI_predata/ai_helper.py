@@ -6,10 +6,11 @@ import config
 def setup_genai():
     """初始化並驗證 Gemini API"""
     if not config.API_KEY or config.API_KEY == "YOUR_API_KEY_HERE":
-        raise ValueError("請先在 config.py 中設定有效的 Google API Key！")
+        raise ValueError("請先在 config.py 或介面中設定有效的 Google API Key！")
     genai.configure(api_key=config.API_KEY)
 
-def analyze_data_structure_with_gemini(sample_csv_text: str):
+# 加入 log_func=print 參數
+def analyze_data_structure_with_gemini(sample_csv_text: str, log_func=print):
     """分析 CSV 前 5 筆紀錄，判斷表頭與類別"""
     setup_genai()
     generation_config = {"temperature": 0.0, "response_mime_type": "application/json"}
@@ -26,10 +27,14 @@ def analyze_data_structure_with_gemini(sample_csv_text: str):
         result = json.loads(response.text)
         return result.get("has_header", False), result.get("categorical_mappings", {})
     except Exception as e:
-        print(f"[ERROR] AI 結構解析失敗: {e}")
-        return True, {} 
+        # 1. 終端機：印出詳細錯誤內容
+        print(f"========== [終端機詳細錯誤] AI 結構解析失敗 ==========\n{str(e)}\n====================================================")
+        # 2. GUI：只顯示簡要中文
+        log_func(f"[錯誤] AI 判斷表頭失敗：{_simplify_error(e)}")
+        return True, {}
 
-def extract_columns_with_gemini(names_content: str):
+# 加入 log_func=print 參數
+def extract_columns_with_gemini(names_content: str, log_func=print):
     """依照描述檔提取欄位名稱"""
     setup_genai()
     generation_config = {"temperature": 0.1, "response_mime_type": "application/json"}
@@ -42,10 +47,13 @@ def extract_columns_with_gemini(names_content: str):
     try:
         response = model.generate_content(prompt)
         return json.loads(response.text)
-    except Exception:
+    except Exception as e:
+        print(f"========== [終端機詳細錯誤] AI 欄位提取失敗 ==========\n{str(e)}\n====================================================")
+        log_func(f"[錯誤] AI 提取欄位名稱失敗：{_simplify_error(e)}")
         return []
 
-def infer_bounds_batch_with_gemini(stats_dict):
+# 加入 log_func=print 參數
+def infer_bounds_batch_with_gemini(stats_dict, log_func=print):
     """一次性讓 AI 推算多個欄位的 Clipping 上下限"""
     setup_genai()
     generation_config = {"temperature": 0.1, "response_mime_type": "application/json"}
@@ -62,5 +70,20 @@ def infer_bounds_batch_with_gemini(stats_dict):
         response = model.generate_content(prompt)
         return json.loads(response.text)
     except Exception as e:
-        print(f"[ERROR] AI 批次推算失敗: {e}")
+        print(f"========== [終端機詳細錯誤] AI 批次推算失敗 ==========\n{str(e)}\n====================================================")
+        log_func(f"[錯誤] AI 批次推算邊界失敗：{_simplify_error(e)}")
         return {}
+
+def _simplify_error(e: Exception) -> str:
+    """將冗長或英文的 API 錯誤轉換為簡潔的中文提示"""
+    err_msg = str(e).lower()
+    if "api_key_invalid" in err_msg or "api key" in err_msg:
+        return "API 金鑰無效，請檢查您的設定。"
+    elif "quota" in err_msg or "429" in err_msg or "exhausted" in err_msg:
+        return "API 請求次數達上限，或免費額度已耗盡。"
+    elif "timeout" in err_msg or "deadline" in err_msg:
+        return "網路連線逾時，請檢查連線狀態。"
+    elif "503" in err_msg or "500" in err_msg:
+        return "Google 伺服器暫時無法回應，請稍後再試。"
+    else:
+        return "未知的連線或解析錯誤，請確認網路或 API 狀態。"
