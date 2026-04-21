@@ -3,11 +3,19 @@ import pandas as pd
 import numpy as np
 import os
 
-from ai_helper import (
-    analyze_data_structure_with_gemini, 
-    extract_columns_with_gemini, 
-    infer_bounds_batch_with_gemini
-)
+# 使用 try-except 確保模組無論從根目錄還是子目錄啟動都能正確 import
+try:
+    from AI_predata.ai_helper import (
+        analyze_data_structure_with_gemini, 
+        extract_columns_with_gemini, 
+        infer_bounds_batch_with_gemini
+    )
+except ImportError:
+    from ai_helper import (
+        analyze_data_structure_with_gemini, 
+        extract_columns_with_gemini, 
+        infer_bounds_batch_with_gemini
+    )
 
 class DataPipeline:
     def __init__(self, log_callback):

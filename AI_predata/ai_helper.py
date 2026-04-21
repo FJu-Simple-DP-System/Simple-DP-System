@@ -1,6 +1,9 @@
 # ai_helper.py
 import json
-import config
+try:
+    from AI_predata import config
+except ImportError:
+    import config
 
 # ==========================================
 # 1. 錯誤翻譯與字串處理工具
@@ -196,3 +199,35 @@ def infer_bounds_batch_with_gemini(stats_dict, log_func=print):
         print(f"========== [終端機詳細錯誤] AI 批次推算 ==========\n{str(e)}\n================================================")
         log_func(f"[錯誤] AI 批次推算邊界失敗：{_simplify_error(e)}")
         return {}
+
+def suggest_dp_parameters(column_name, stats_summary, log_func=print):
+    """根據資料統計摘要，讓 AI 建議合理的 DP 參數與敏感度邊界"""
+    prompt = f"""
+    任務：作為差分隱私顧問，請為以下資料欄位建議合理的隱私預算 (Epsilon) 以及資料截斷邊界 (Min/Max)。
+    
+    欄位名稱：{column_name}
+    統計摘要 (JSON)：
+    {json.dumps(stats_summary, ensure_ascii=False, indent=2)}
+    
+    規則：
+    1. 建議一個 ε 數值 (通常在 0.1 到 10 之間)。
+    2. 根據 Min, Max, Mean 與 Std 推算合理的 [suggested_min, suggested_max]。若有極端值，請適度內縮 (Clipping) 以降低敏感度。
+    3. 用 50 字以內的中文說明理由。
+    
+    請回傳嚴格的 JSON 格式：
+    {{
+      "suggested_epsilon": 數值,
+      "suggested_min": 數值,
+      "suggested_max": 數值,
+      "reason": "說明文字"
+    }}
+    """
+    try:
+        provider = get_ai_provider()
+        response_text = provider.generate_json(prompt, temperature=0.2)
+        clean_json = _clean_json_string(response_text)
+        return json.loads(clean_json)
+    except Exception as e:
+        print(f"========== [終端機詳細錯誤] AI 參數建議失敗 ==========\n{str(e)}\n================================================")
+        log_func(f"[錯誤] AI 參數建議失敗：{_simplify_error(e)}")
+        return None

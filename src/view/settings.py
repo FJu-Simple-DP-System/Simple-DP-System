@@ -5,6 +5,7 @@ from src.core.elements import dp_settings
 class SettingsPanel(ctk.CTkFrame):
     def __init__(self, master, **kwargs):
         self.on_run = kwargs.pop("on_run", None)
+        self.on_ai_suggest = kwargs.pop("on_ai_suggest", None) # 新增：接收 AI 建議的 callback
         super().__init__(master, **kwargs)
 
         # 標題
@@ -12,12 +13,30 @@ class SettingsPanel(ctk.CTkFrame):
         self.label_title.pack(pady=(20, 10), padx=10, anchor="w")
 
         # --- 1. 隱私預算 (Epsilon) ---
-        self.create_info_label(
-            text="隱私預算 (ε): 1.0", 
-            tooltip_text="ε (Epsilon) 控制隱私保護程度：\n• 值越小：隱私越高，但雜訊越大。\n• 值越大：數據越準確，隱私風險較高。"
+        # 建立一個橫向的 Frame 來同時容納標籤、AI 按鈕與提示按鈕
+        self.frame_eps_header = ctk.CTkFrame(self, fg_color="transparent")
+        self.frame_eps_header.pack(pady=(10, 0), padx=10, fill="x")
+
+        # 1-1. 左側標籤
+        self.lbl_epsilon = ctk.CTkLabel(self.frame_eps_header, text="隱私預算 (ε): 1.0", font=("Arial", 14))
+        self.lbl_epsilon.pack(side="left")
+
+        # 1-2. 右側問號 (維持原本的 Tooltip 說明功能)
+        info_btn = ctk.CTkButton(
+            self.frame_eps_header, text="?", width=20, height=20, corner_radius=10,
+            fg_color="gray", hover_color="gray70", font=("Arial", 12, "bold")
         )
-        self.lbl_epsilon = self.last_label
+        info_btn.pack(side="right", padx=(5, 0)) # 加點 padding 讓它跟 AI 按鈕分開
+        CTkToolTip(info_btn, "ε (Epsilon) 控制隱私保護程度：\n• 值越小：隱私越高，但雜訊越大。\n• 值越大：數據越準確，隱私風險較高。")
+
+        # 1-3. 【新增】右側 AI 建議按鈕
+        self.btn_ai_suggest = ctk.CTkButton(
+            self.frame_eps_header, text="🤖 AI 建議", width=65, height=22, 
+            font=("Arial", 11), fg_color="#3B8ED0", command=self.on_ai_suggest
+        )
+        self.btn_ai_suggest.pack(side="right")
         
+        # 1-4. 下方的滑桿
         self.slider_epsilon = ctk.CTkSlider(self, from_=0.1, to=10.0, number_of_steps=99, command=self.update_epsilon_label)
         self.slider_epsilon.set(1.0)
         self.slider_epsilon.pack(pady=(5, 10), padx=10, fill="x")
@@ -159,3 +178,23 @@ class SettingsPanel(ctk.CTkFrame):
         # 3. 執行
         if self.on_run is not None:
             self.on_run()
+            
+    def update_bounds(self, min_val, max_val):
+        """接收 AI 建議或外部傳入的上下界，並更新到 UI 與設定中"""
+        # 清空現有輸入
+        self.entry_min.delete(0, "end")
+        self.entry_max.delete(0, "end")
+        
+        # 填入新數值 (轉成字串，並保留小數點後兩位讓畫面乾淨)
+        if isinstance(min_val, (int, float)):
+            self.entry_min.insert(0, f"{min_val:.2f}".rstrip('0').rstrip('.'))
+        else:
+            self.entry_min.insert(0, str(min_val))
+            
+        if isinstance(max_val, (int, float)):
+            self.entry_max.insert(0, f"{max_val:.2f}".rstrip('0').rstrip('.'))
+        else:
+            self.entry_max.insert(0, str(max_val))
+            
+        # 同步寫回 dp_settings
+        dp_settings.set_sensitivity(self.entry_min.get(), self.entry_max.get())
